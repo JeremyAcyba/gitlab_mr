@@ -52,8 +52,10 @@ if (isGitlabContext) {
 
 function init(currentUrl) {
     if (currentUrl.indexOf('dashboard') !== -1 || currentUrl.indexOf('groups') !== -1) {
+        // We're on the dashboard or groups page where mr of multiple projects are mixed together
         initMyMrPage();
     } else {
+        // We're on the mr listing of a single project
         const body = document.querySelector('body[data-project-id]');
         if (null === body && undefined === body) {
             return;
@@ -61,6 +63,7 @@ function init(currentUrl) {
 
         projectId = body.dataset.projectId;
         if (undefined === projectId) return false;
+
         initCountDiscussions();
         initConditionalDisplay();
     }

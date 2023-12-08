@@ -17,13 +17,16 @@ function handleFirstCall() {
     if (xhrCountDiscussions.readyState === 4 && xhrCountDiscussions.status >= 200 && xhrCountDiscussions.status <= 299) {
         mergeRequestsCountDiscussion = JSON.parse(xhrCountDiscussions.responseText);
         Object.keys(mergeRequestsCountDiscussion).forEach(key => {
-            handelAllMr(key);
+            handleAllMr(key);
         });
     }
 }
 
-function handelAllMr(key, projectID) {
-    if (undefined === projectID) projectID = projectId;
+function handleAllMr(key, projectID) {
+    if (undefined === projectID) {
+        projectID = projectId;
+    }
+
     xhrArrayCountDiscussions[key] = new XMLHttpRequest();
     xhrArrayCountDiscussions[key].onreadystatechange = function () {
         handleMrCall(key);

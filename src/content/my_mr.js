@@ -2,19 +2,21 @@ const xhrMyMrProjects = [];
 const xhrMyMergeRequests = [];
 const infoMyMergeRequest = [];
 
+// Called for the personal MR listings (dashboard or group listing)
 function initMyMrPage() {
     const mergeRequests = document.querySelectorAll('li.merge-request .merge-request-title-text a');
-    if (mergeRequests.length < 1) return true;
+    if (mergeRequests.length < 1) return;
+
     mergeRequestsCountDiscussion = {};
     for (let i = 0 ; i < mergeRequests.length ; i++) {
-        //get the mr info
+        // get the mr info
         infoMyMergeRequest[i] = mergeRequests[i].getAttribute('href').split('/').splice(-4);
 
 
         xhrMyMrProjects[i] = new XMLHttpRequest();
         xhrMyMrProjects[i].onreadystatechange = function () {
             if (xhrMyMrProjects[i].readyState === 4) {
-                projectId = handleProjects(infoMyMergeRequest[i][0], JSON.parse(xhrMyMrProjects[i].responseText));
+                projectId = getProjectIdByName(infoMyMergeRequest[i][0], JSON.parse(xhrMyMrProjects[i].responseText));
                 if (projectId) {
                     getMergeRequestMyMR(projectId, infoMyMergeRequest[i][3]);
                 }
@@ -25,10 +27,13 @@ function initMyMrPage() {
     }
 }
 
-function handleProjects(projectName, allProjects) {
+function getProjectIdByName(projectName, allProjects) {
     for (let i = 0 ; i < allProjects.length ; i++) {
-        if (allProjects[i].path === projectName) return allProjects[i].id;
+        if (allProjects[i].path === projectName) {
+            return allProjects[i].id;
+        }
     }
+
     return false;
 }
 
@@ -41,7 +46,18 @@ function getMergeRequestMyMR(projectID, mrId) {
             mergeRequestsCountDiscussion[`${projectID}-${mrId}`] = mergeRequest;
             // mergeRequestsCountDiscussion.push(mergeRequest);
             projectId = projectID;
-            handelAllMr(`${projectID}-${mrId}`, projectID);
+
+            if (mergeRequest.draft) {
+                if (mergeRequest.author.username === username) {
+                    //TODO set MR as action needed
+                } else {
+                    //TODO set MR as waiting
+                }
+            } else {
+                //TODO normal handling
+            }
+
+            handleAllMr(`${projectID}-${mrId}`, projectID);
 
             getUpvoters(mergeRequest.iid, mergeRequest.author.username === username, mergeRequest.upvotes >= upvotesNeeded, projectID, mergeRequest.id);
         }
