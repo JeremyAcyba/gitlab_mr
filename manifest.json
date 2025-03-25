@@ -19,7 +19,6 @@
                 "<all_urls>"
             ],
             "css": [
-                "src/content/content.css"
             ],
             "js": [
                 "src/content/helper_api.js",
