@@ -17,12 +17,12 @@ function handleFirstCall() {
     if (xhrCountDiscussions.readyState === 4 && xhrCountDiscussions.status >= 200 && xhrCountDiscussions.status <= 299) {
         mergeRequestsCountDiscussion = JSON.parse(xhrCountDiscussions.responseText);
         Object.keys(mergeRequestsCountDiscussion).forEach(key => {
-            handelAllMr(key);
+            handleAllMr(key);
         });
     }
 }
 
-function handelAllMr(key, projectID) {
+function handleAllMr(key, projectID) {
     if (undefined === projectID) projectID = projectId;
     xhrArrayCountDiscussions[key] = new XMLHttpRequest();
     xhrArrayCountDiscussions[key].onreadystatechange = function () {
@@ -58,16 +58,15 @@ function handleDiscussions(key, discussion) {
 }
 
 function findAndReplace(requestId, count) {
-    const mergeRequest = document.getElementById(`merge_request_${requestId}`);
-    if (!mergeRequest) return;
-    const issue = mergeRequest.getElementsByClassName('issuable-info-container')[0];
-    if (issue === null) return;
+    const mergeRequest = document.getElementById(`issuable_${requestId}`);
+    if (!mergeRequest) {
+        return;
+    }
     count.resolved = count.total >= count.notResolved ? count.total - count.notResolved : 0;
-    addHtml(issue, count);
+    addHtml(mergeRequest, count);
 }
 
 function addHtml(container, count) {
     const discNow = container.getElementsByClassName('issuable-meta')[0];
-    discNow.querySelectorAll('[data-testid="issuable-comments"]')[0].innerHTML += ' comments';
     discNow.innerHTML += '<div class="merge_request_acyboys">Discussions resolved: ' + count.resolved + '/' + count.total + '</div>';
 }

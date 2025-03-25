@@ -43,22 +43,20 @@ function sortMergeRequest() {
 }
 
 function addOpacityIfNotTracked(mergeRequestId) {
-    const issue = document.getElementById(`merge_request_${mergeRequestId}`).getElementsByClassName('issuable-info-container')[0];
+    const issue = document.getElementById(`issuable_${mergeRequestId}`);
     if (issue === null) return;
     issue.style.opacity = '.5';
 }
 
 function displayStatusMr(mergeRequestId) {
-    const issueContainer = document.getElementById(`merge_request_${mergeRequestId}`);
+    const issueContainer = document.getElementById(`issuable_${mergeRequestId}`);
     if (!issueContainer) {
         return;
     }
-    const issue = document.getElementById(`merge_request_${mergeRequestId}`).getElementsByClassName('issuable-info-container')[0];
-    if (issue === null) return;
-    issue.style.borderLeft = '5px solid ' + colors[mergeRequestStatus[mergeRequestId].status];
-    issue.style.paddingLeft = '10px';
+    issueContainer.style.borderLeft = '5px solid ' + colors[mergeRequestStatus[mergeRequestId].status];
+    issueContainer.style.paddingLeft = '10px';
     if (undefined !== mergeRequestStatus[mergeRequestId].message && '' !== mergeRequestStatus[mergeRequestId].message) {
-        issue.querySelector('.merge-request-title').innerHTML += '<span>(' + mergeRequestStatus[mergeRequestId].message + ')</span>';
+        issueContainer.querySelector('.merge-request-title').innerHTML += '<span>(' + mergeRequestStatus[mergeRequestId].message + ')</span>';
     }
 }
 

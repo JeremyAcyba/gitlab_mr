@@ -3,26 +3,30 @@ const xhrMyMergeRequests = [];
 const infoMyMergeRequest = [];
 
 function initMyMrPage() {
-    const mergeRequests = document.querySelectorAll('li.merge-request .merge-request-title-text a');
-    if (mergeRequests.length < 1) return true;
-    mergeRequestsCountDiscussion = {};
-    for (let i = 0 ; i < mergeRequests.length ; i++) {
-        //get the mr info
-        infoMyMergeRequest[i] = mergeRequests[i].getAttribute('href').split('/').splice(-4);
+    setTimeout(() => {
+        const mergeRequests = document.querySelectorAll('li.merge-request a.issue-title-text');
+        if (mergeRequests.length < 1) {
+            return true;
+        }
 
+        mergeRequestsCountDiscussion = {};
+        for (let i = 0 ; i < mergeRequests.length ; i++) {
+            //get the mr info
+            infoMyMergeRequest[i] = mergeRequests[i].getAttribute('href').split('/').splice(-4);
 
-        xhrMyMrProjects[i] = new XMLHttpRequest();
-        xhrMyMrProjects[i].onreadystatechange = function () {
-            if (xhrMyMrProjects[i].readyState === 4) {
-                projectId = handleProjects(infoMyMergeRequest[i][0], JSON.parse(xhrMyMrProjects[i].responseText));
-                if (projectId) {
-                    getMergeRequestMyMR(projectId, infoMyMergeRequest[i][3]);
+            xhrMyMrProjects[i] = new XMLHttpRequest();
+            xhrMyMrProjects[i].onreadystatechange = function () {
+                if (xhrMyMrProjects[i].readyState === 4) {
+                    projectId = handleProjects(infoMyMergeRequest[i][0], JSON.parse(xhrMyMrProjects[i].responseText));
+                    if (projectId) {
+                        getMergeRequestMyMR(projectId, infoMyMergeRequest[i][3]);
+                    }
                 }
-            }
-        };
-        xhrMyMrProjects[i].open('GET', `${apiUrlBase}/projects?search=${infoMyMergeRequest[i][0]}`);
-        xhrMyMrProjects[i].send();
-    }
+            };
+            xhrMyMrProjects[i].open('GET', `${apiUrlBase}/projects?search=${infoMyMergeRequest[i][0]}`);
+            xhrMyMrProjects[i].send();
+        }
+    }, 2000);
 }
 
 function handleProjects(projectName, allProjects) {
@@ -41,7 +45,7 @@ function getMergeRequestMyMR(projectID, mrId) {
             mergeRequestsCountDiscussion[`${projectID}-${mrId}`] = mergeRequest;
             // mergeRequestsCountDiscussion.push(mergeRequest);
             projectId = projectID;
-            handelAllMr(`${projectID}-${mrId}`, projectID);
+            handleAllMr(`${projectID}-${mrId}`, projectID);
 
             getUpvoters(mergeRequest.iid, mergeRequest.author.username === username, mergeRequest.upvotes >= upvotesNeeded, projectID, mergeRequest.id);
         }

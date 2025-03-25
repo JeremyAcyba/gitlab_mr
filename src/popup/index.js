@@ -22,11 +22,21 @@ chrome.storage.sync.get(['gitlabmr'], function (result) {
         if (result.gitlabmr.upvotes !== undefined) upvotes = result.gitlabmr.upvotes;
         if (result.gitlabmr.tracking !== undefined) tracking = result.gitlabmr.tracking;
         if (result.gitlabmr.colors !== undefined) colors = result.gitlabmr.colors;
+    } else {
+        result.gitlabmr = {
+            username: username,
+            url: gitlabUrl,
+            working_with: workWith,
+            upvotes: upvotes,
+            tracking: tracking,
+            colors: colors
+        };
     }
 
     // Set the option values
     document.getElementById('gitlab-mr__settings__username').value = username;
     document.getElementById('gitlab-mr__settings__url').value = gitlabUrl;
+
     if (result.gitlabmr.working_with === 'approvals') {
         document.getElementById('gitlab-mr__approval').checked = true;
     } else {

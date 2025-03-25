@@ -11,7 +11,6 @@ let colors = {
 
 let projectId;
 const isGitlabContext = document.querySelector('.tanuki-logo') !== null;
-
 if (isGitlabContext) {
     const currentUrl = window.location.toString();
 
@@ -60,7 +59,9 @@ function init(currentUrl) {
         }
 
         projectId = body.dataset.projectId;
-        if (undefined === projectId) return false;
+        if (undefined === projectId) {
+            return false;
+        }
         initCountDiscussions();
         initConditionalDisplay();
     }
