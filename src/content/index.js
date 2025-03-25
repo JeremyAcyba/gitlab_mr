@@ -62,7 +62,6 @@ function init(currentUrl) {
         if (undefined === projectId) {
             return false;
         }
-        initCountDiscussions();
         initConditionalDisplay();
     }
 }

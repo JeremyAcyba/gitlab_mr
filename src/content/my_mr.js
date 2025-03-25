@@ -9,7 +9,6 @@ function initMyMrPage() {
             return true;
         }
 
-        mergeRequestsCountDiscussion = {};
         for (let i = 0 ; i < mergeRequests.length ; i++) {
             //get the mr info
             infoMyMergeRequest[i] = mergeRequests[i].getAttribute('href').split('/').splice(-4);
@@ -42,10 +41,7 @@ function getMergeRequestMyMR(projectID, mrId) {
         if (xhrMyMergeRequests[`${projectID}-${mrId}`].readyState === 4) {
             const mergeRequest = JSON.parse(xhrMyMergeRequests[`${projectID}-${mrId}`].responseText)[0];
 
-            mergeRequestsCountDiscussion[`${projectID}-${mrId}`] = mergeRequest;
-            // mergeRequestsCountDiscussion.push(mergeRequest);
             projectId = projectID;
-            handleAllMr(`${projectID}-${mrId}`, projectID);
 
             getUpvoters(mergeRequest.iid, mergeRequest.author.username === username, mergeRequest.upvotes >= upvotesNeeded, projectID, mergeRequest.id);
         }
