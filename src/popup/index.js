@@ -1,102 +1,125 @@
-handleChangedOptions();
+/** Settings UI. Everything is persisted as soon as the user changes it. */
+(function () {
+    'use strict';
 
-// Init option values
-chrome.storage.sync.get(['gitlabmr'], function (result) {
-    // default option values
-    let username = '';
-    let gitlabUrl = '';
-    let workWith = 'upvotes';
-    let upvotes = 2;
-    let tracking = '';
-    let colors = {
-        actions: '#FF2D00',
-        wait: '#FFDC00',
-        done: '#00E90E'
+    const settingsModule = globalThis.GitlabMrTools.settings;
+    const { WORK_WITH } = settingsModule;
+
+    const SAVED_MESSAGE_DURATION_MS = 2000;
+    /** Debounce, so typing a username does not write to storage on every key. */
+    const SAVE_DEBOUNCE_MS = 300;
+
+    const fields = {
+        username: document.getElementById('gitlab-mr__settings__username'),
+        url: document.getElementById('gitlab-mr__settings__url'),
+        urlError: document.getElementById('gitlab-mr__settings__url__error'),
+        upvotesRadio: document.getElementById('gitlab-mr__upvotes'),
+        approvalRadio: document.getElementById('gitlab-mr__approval'),
+        upvotes: document.getElementById('gitlab-mr__settings__upvotes'),
+        upvotesContainer: document.getElementById('gitlab-mr__settings__upvotes__container'),
+        tracking: document.getElementById('gitlab-mr__track__mr'),
+        colorActions: document.getElementById('gitlab-mr__color_action'),
+        colorWait: document.getElementById('gitlab-mr__color_wait'),
+        colorDone: document.getElementById('gitlab-mr__color_done'),
+        saved: document.getElementById('gitlab-mr__saved')
     };
 
-    // Use saved values if any
-    if (result.gitlabmr !== undefined) {
-        if (result.gitlabmr.username !== undefined) username = result.gitlabmr.username;
-        if (result.gitlabmr.url !== undefined) gitlabUrl = result.gitlabmr.url;
-        if (result.gitlabmr.working_with !== undefined) workWith = result.gitlabmr.working_with;
-        if (result.gitlabmr.upvotes !== undefined) upvotes = result.gitlabmr.upvotes;
-        if (result.gitlabmr.tracking !== undefined) tracking = result.gitlabmr.tracking;
-        if (result.gitlabmr.colors !== undefined) colors = result.gitlabmr.colors;
-    } else {
-        result.gitlabmr = {
-            username: username,
-            url: gitlabUrl,
-            working_with: workWith,
-            upvotes: upvotes,
-            tracking: tracking,
-            colors: colors
+    let savedMessageTimer;
+
+    /** @param {ReturnType<typeof settingsModule.normalize>} settings */
+    function render(settings) {
+        fields.username.value = settings.username;
+        fields.url.value = settings.url;
+        fields.upvotesRadio.checked = settings.working_with === WORK_WITH.UPVOTES;
+        fields.approvalRadio.checked = settings.working_with === WORK_WITH.APPROVALS;
+        fields.upvotes.value = String(settings.upvotes);
+        fields.tracking.value = settings.tracking;
+        fields.colorActions.value = settings.colors.actions;
+        fields.colorWait.value = settings.colors.wait;
+        fields.colorDone.value = settings.colors.done;
+
+        syncUpvotesVisibility();
+    }
+
+    function syncUpvotesVisibility() {
+        fields.upvotesContainer.hidden = !fields.upvotesRadio.checked;
+    }
+
+    /** @returns {object} the raw form values, normalized on the way to storage. */
+    function readForm() {
+        return {
+            username: fields.username.value,
+            url: fields.url.value,
+            working_with: fields.approvalRadio.checked ? WORK_WITH.APPROVALS : WORK_WITH.UPVOTES,
+            upvotes: fields.upvotes.value,
+            tracking: fields.tracking.value,
+            colors: {
+                actions: fields.colorActions.value,
+                wait: fields.colorWait.value,
+                done: fields.colorDone.value
+            }
         };
     }
 
-    // Set the option values
-    document.getElementById('gitlab-mr__settings__username').value = username;
-    document.getElementById('gitlab-mr__settings__url').value = gitlabUrl;
-
-    if (result.gitlabmr.working_with === 'approvals') {
-        document.getElementById('gitlab-mr__approval').checked = true;
-    } else {
-        document.getElementById('gitlab-mr__upvotes').checked = true;
-        let event = new Event('change');
-        document.getElementById('gitlab-mr__upvotes').dispatchEvent(event);
+    function showSavedMessage() {
+        // textContent, never innerHTML: nothing here should ever be parsed as markup.
+        fields.saved.textContent = 'Configuration saved';
+        clearTimeout(savedMessageTimer);
+        savedMessageTimer = setTimeout(() => {
+            fields.saved.textContent = '';
+        }, SAVED_MESSAGE_DURATION_MS);
     }
-    document.getElementById('gitlab-mr__settings__upvotes').value = upvotes;
-    document.getElementById('gitlab-mr__track__mr').value = tracking;
-    document.getElementById('gitlab-mr__color_action').value = colors.actions;
-    document.getElementById('gitlab-mr__color_wait').value = colors.wait;
-    document.getElementById('gitlab-mr__color_done').value = colors.done;
-});
 
-function handleChangedOptions() {
-    document.getElementById('gitlab-mr__upvotes').addEventListener('change', changeStatusWorkWith);
-    document.getElementById('gitlab-mr__approval').addEventListener('change', changeStatusWorkWith);
+    async function save() {
+        const form = readForm();
 
-    document.querySelectorAll('[type="text"], [type="number"]').forEach((element) => {
-        element.addEventListener('keydown', (event) => {
-            setTimeout(() => {
-                saveOptions();
-            }, 100);
-        });
-    });
-
-    // we do it for input numbers in case the user clicks the up/down arrows
-    document.querySelectorAll('[type="radio"], [type="color"], [type="text"], [type="number"], select').forEach((element) => {
-        element.addEventListener('change', (event) => {
-            setTimeout(() => {
-                saveOptions();
-            }, 100);
-        });
-    });
-}
-
-function changeStatusWorkWith() {
-    document.querySelector('.gitlab-mr__settings__upvotes__container').style.display = this.value === 'upvotes' ? 'flex' : 'none';
-}
-
-function saveOptions() {
-    const workWith = document.querySelector('input[name="working_with"]:checked').value;
-    const options = {
-        username: document.getElementById('gitlab-mr__settings__username').value,
-        url: document.getElementById('gitlab-mr__settings__url').value,
-        working_with: workWith === undefined ? 'upvotes' : workWith,
-        upvotes: document.getElementById('gitlab-mr__settings__upvotes').value,
-        tracking: document.getElementById('gitlab-mr__track__mr').value,
-        colors: {
-            actions: document.getElementById('gitlab-mr__color_action').value,
-            wait: document.getElementById('gitlab-mr__color_wait').value,
-            done: document.getElementById('gitlab-mr__color_done').value
+        // An unparseable URL is dropped by `normalize`, which would silently
+        // disable the extension; tell the user instead.
+        const urlIsInvalid = form.url.trim() !== '' && settingsModule.parseGitlabUrl(form.url) === null;
+        fields.urlError.hidden = !urlIsInvalid;
+        if (urlIsInvalid) {
+            return;
         }
-    };
 
-    chrome.storage.sync.set({'gitlabmr': options}, function () {
-        const savedContainer = document.querySelector('#gitlab-mr__saved');
-        savedContainer.innerHTML = 'Configuration saved';
-        setTimeout(() => {
-            savedContainer.innerHTML = '';
-        }, 2000);
-    });
-}
+        await settingsModule.save(form);
+        showSavedMessage();
+    }
+
+    function debounce(fn, delay) {
+        let timer;
+        return () => {
+            clearTimeout(timer);
+            timer = setTimeout(fn, delay);
+        };
+    }
+
+    function bindEvents() {
+        const saveNow = () => {
+            save().catch((error) => console.warn('[gitlab-mr-tools] could not save settings:', error));
+        };
+        const saveSoon = debounce(saveNow, SAVE_DEBOUNCE_MS);
+
+        // `input` covers typing, pasting and the number spinners in one go.
+        fields.username.addEventListener('input', saveSoon);
+        fields.url.addEventListener('input', saveSoon);
+        fields.upvotes.addEventListener('input', saveSoon);
+
+        [fields.upvotesRadio, fields.approvalRadio].forEach((radio) => {
+            radio.addEventListener('change', () => {
+                syncUpvotesVisibility();
+                saveNow();
+            });
+        });
+
+        [fields.tracking, fields.colorActions, fields.colorWait, fields.colorDone].forEach((field) => {
+            field.addEventListener('change', saveNow);
+        });
+    }
+
+    async function init() {
+        render(await settingsModule.load());
+        bindEvents();
+    }
+
+    init().catch((error) => console.warn('[gitlab-mr-tools] could not open the settings:', error));
+})();

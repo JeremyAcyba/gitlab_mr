@@ -1,58 +1,75 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 	<head>
-		<link rel="stylesheet" href="style.css">
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/foundation-sites@6.5.3/dist/css/foundation.min.css">
+		<meta charset="utf-8" />
+		<title>Gitlab enhancer settings</title>
+		<link rel="stylesheet" href="style.css" />
 	</head>
 	<body>
-		<div id="gitlab-mr">
-			<div class="gitlab-mr__settings__container cell grid-x">
-				<p class="cell text-center" id="gitlab-mr__saved"></p>
-				<div class="cell grid-x">
-					<label for="gitlab-mr__settings__username" class="cell">Gitlab Username</label>
-					<input type="text" id="gitlab-mr__settings__username" class="cell">
-				</div>
-				<div class="cell grid-x margin-top-1">
-					<label for="gitlab-mr__settings__url" class="cell">Gitlab Saas URL</label>
-					<input type="text" id="gitlab-mr__settings__url" class="cell">
-				</div>
-				<div class="cell grid-x grid-margin-x margin-top-1 gitlab-mr__align_center">
-					<label class="cell">With what are you working?</label>
-					<div class="cell grid-x grid-margin-x">
-						<label class="cell shrink">
-							<input type="radio" name="working_with" value="upvotes" id="gitlab-mr__upvotes">
-							Upvotes (thumbs)
-						</label>
-						<label>
-							<input type="radio" name="working_with" value="approvals" id="gitlab-mr__approval">
-							Approvals
-						</label>
-					</div>
-					<div class="cell grid-x gitlab-mr__settings__upvotes__container">
-						<label for="gitlab-mr__settings__upvotes" class="cell shrink">Upvotes needed</label>
-						<input type="number" min="0" value="2" id="gitlab-mr__settings__upvotes" class="cell small-2">
-					</div>
-				</div>
-				<div class="cell grid-x grid-margin-x margin-top-1 gitlab-mr__align_center">
-					<p class="cell small-6 gitlab-mr__colors__title text-center">Merge request tracking: </p>
-					<select id="gitlab-mr__track__mr" class="cell small-6">
-						<option value="">track all merge requests</option>
-						<option value="not_mine">don't track merge request open by other</option>
-						<option value="not_mine_participate">don't track merge request open by other in which I didn't participate</option>
-					</select>
-				</div>
-				<div class="cell grid-x grid-margin-x margin-top-1">
-					<p class="cell small-6 gitlab-mr__colors__title text-center">Meaning</p>
-					<p class="cell small-6 gitlab-mr__colors__title text-center">Color</p>
-					<label for="gitlab-mr__color_action" class="cell small-6 text-center">Actions needed</label>
-					<input type="color" id="gitlab-mr__color_action" class="cell small-6">
-					<label for="gitlab-mr__color_action" class="cell small-6 text-center">Waiting</label>
-					<input type="color" id="gitlab-mr__color_wait" class="cell small-6">
-					<label for="gitlab-mr__color_action" class="cell small-6 text-center">Done</label>
-					<input type="color" id="gitlab-mr__color_done" class="cell small-6">
-				</div>
+		<main id="gitlab-mr">
+			<p id="gitlab-mr__saved" class="gitlab-mr__saved" role="status" aria-live="polite"></p>
+
+			<div class="gitlab-mr__field">
+				<label for="gitlab-mr__settings__username">Gitlab username</label>
+				<input type="text" id="gitlab-mr__settings__username" autocomplete="off" spellcheck="false" />
 			</div>
-			<script src="index.js" type="text/javascript"></script>
-		</div>
+
+			<div class="gitlab-mr__field">
+				<label for="gitlab-mr__settings__url">Gitlab instance URL</label>
+				<input
+					type="url"
+					id="gitlab-mr__settings__url"
+					placeholder="https://gitlab.com"
+					autocomplete="off"
+					spellcheck="false"
+				/>
+				<p class="gitlab-mr__error" id="gitlab-mr__settings__url__error" hidden>
+					Enter a full http(s) URL.
+				</p>
+			</div>
+
+			<fieldset class="gitlab-mr__field">
+				<legend>What are you working with?</legend>
+				<div class="gitlab-mr__radios">
+					<label>
+						<input type="radio" name="working_with" value="upvotes" id="gitlab-mr__upvotes" />
+						Upvotes (thumbs)
+					</label>
+					<label>
+						<input type="radio" name="working_with" value="approvals" id="gitlab-mr__approval" />
+						Approvals
+					</label>
+				</div>
+				<div class="gitlab-mr__inline" id="gitlab-mr__settings__upvotes__container">
+					<label for="gitlab-mr__settings__upvotes">Upvotes needed</label>
+					<input type="number" min="1" step="1" value="2" id="gitlab-mr__settings__upvotes" />
+				</div>
+			</fieldset>
+
+			<div class="gitlab-mr__field">
+				<label for="gitlab-mr__track__mr">Merge request tracking</label>
+				<select id="gitlab-mr__track__mr">
+					<option value="">Track all merge requests</option>
+					<option value="not_mine">Don't track merge requests opened by others</option>
+					<option value="not_mine_participate">
+						Don't track merge requests opened by others I didn't take part in
+					</option>
+				</select>
+			</div>
+
+			<fieldset class="gitlab-mr__field">
+				<legend>Colors</legend>
+				<div class="gitlab-mr__colors">
+					<label for="gitlab-mr__color_action">Actions needed</label>
+					<input type="color" id="gitlab-mr__color_action" />
+					<label for="gitlab-mr__color_wait">Waiting</label>
+					<input type="color" id="gitlab-mr__color_wait" />
+					<label for="gitlab-mr__color_done">Done</label>
+					<input type="color" id="gitlab-mr__color_done" />
+				</div>
+			</fieldset>
+		</main>
+		<script src="../shared/settings.js"></script>
+		<script src="index.js"></script>
 	</body>
 </html>

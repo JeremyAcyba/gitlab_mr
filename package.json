@@ -1,0 +1,20 @@
+{
+    "name": "gitlab-mr-tools",
+    "version": "4.0.0",
+    "private": true,
+    "description": "Chrome extension enhancing the GitLab merge request listing",
+    "license": "MIT",
+    "scripts": {
+        "test": "node --test",
+        "lint": "eslint .",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "package": "./zip.sh"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.15.0",
+        "eslint": "^9.15.0",
+        "globals": "^15.12.0",
+        "prettier": "^3.4.0"
+    }
+}

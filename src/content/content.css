@@ -1,0 +1,67 @@
+/*
+ * Styles injected into GitLab pages. Everything is namespaced under `gmt-`
+ * and scoped to elements the extension adds or flags itself, so we never
+ * restyle GitLab's own components by accident.
+ */
+
+.gmt-row {
+	border-left: 5px solid var(--gmt-status-color, transparent);
+	padding-left: 10px;
+	border-radius: 3px;
+	transition: border-left-width 0.2s ease;
+}
+
+.gmt-row:hover {
+	border-left-width: 7px;
+}
+
+.gmt-untracked {
+	opacity: 0.5;
+}
+
+.gmt-message {
+	margin-left: 0.4em;
+	font-weight: 600;
+	color: var(--gmt-status-color, inherit);
+	white-space: nowrap;
+}
+
+/* Resolved threads collapsed on the merge request page. */
+
+.gmt-thread--collapsed {
+	display: none;
+}
+
+.gmt-thread-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35em;
+	margin: 0.25rem 0 0.5rem;
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	font-size: 13px;
+	color: #919191;
+	cursor: pointer;
+	transition: color 0.1s ease;
+}
+
+.gmt-thread-toggle:hover,
+.gmt-thread-toggle:focus-visible {
+	color: #1f75cb;
+}
+
+.gmt-thread-toggle::before {
+	content: '';
+	width: 0;
+	height: 0;
+	border-left: 4px solid currentColor;
+	border-top: 4px solid transparent;
+	border-bottom: 4px solid transparent;
+	transition: transform 0.15s ease;
+}
+
+.gmt-thread-toggle[aria-expanded='true']::before {
+	transform: rotate(90deg);
+}
