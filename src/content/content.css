@@ -4,15 +4,21 @@
  * restyle GitLab's own components by accident.
  */
 
-.gmt-row {
-	border-left: 5px solid var(--gmt-status-color, transparent);
+/*
+ * The status bar is an inset shadow rather than a left border on purpose:
+ * GitLab paints the listing rows with `border-color: var(--gl-border-color-default)`,
+ * which wins over any border colour we could set from here. A shadow is a
+ * property GitLab does not touch on those rows, and it costs no layout.
+ */
+.gmt-row[data-gmt-status] {
+	box-shadow: inset 5px 0 0 0 var(--gmt-status-color, transparent);
 	padding-left: 10px;
 	border-radius: 3px;
-	transition: border-left-width 0.2s ease;
+	transition: box-shadow 0.2s ease;
 }
 
-.gmt-row:hover {
-	border-left-width: 7px;
+.gmt-row[data-gmt-status]:hover {
+	box-shadow: inset 7px 0 0 0 var(--gmt-status-color, transparent);
 }
 
 .gmt-untracked {

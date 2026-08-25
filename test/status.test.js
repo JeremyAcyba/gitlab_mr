@@ -3,6 +3,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+
 const {
     STATUS,
     lastHumanNote,
@@ -10,6 +14,23 @@ const {
     computeAuthorStatus,
     computeReviewerStatus
 } = require('../src/content/status.js');
+
+/** review.js registers itself on a namespace, so load it the way Chrome does. */
+function loadReviewModule() {
+    const sandbox = { console };
+    sandbox.globalThis = sandbox;
+    sandbox.GitlabMrTools = {
+        settings: require('../src/shared/settings.js'),
+        status: require('../src/content/status.js'),
+        decorate: { decorate() {}, dim() {} }
+    };
+    vm.createContext(sandbox);
+
+    const file = path.join(__dirname, '..', 'src', 'content', 'review.js');
+    vm.runInContext(fs.readFileSync(file, 'utf8'), sandbox, { filename: 'review.js' });
+
+    return sandbox.GitlabMrTools.review;
+}
 
 const ME = 'jeremy';
 const OTHER = 'alice';
@@ -126,4 +147,15 @@ test('hasParticipated looks at every note, resolvable or not', () => {
     assert.equal(hasParticipated([thread(note(OTHER), note(ME))], ME), true);
     assert.equal(hasParticipated([thread(note(OTHER))], ME), false);
     assert.equal(hasParticipated(undefined, ME), false);
+});
+
+test('the merge threshold is two upvotes and no downvote', () => {
+    const { isApproved, UPVOTES_NEEDED } = loadReviewModule();
+
+    assert.equal(UPVOTES_NEEDED, 2);
+    assert.equal(isApproved({ upvotes: 2, downvotes: 0 }), true);
+    assert.equal(isApproved({ upvotes: 3, downvotes: 0 }), true);
+    assert.equal(isApproved({ upvotes: 1, downvotes: 0 }), false);
+    // A single thumbs down holds it back, however many thumbs up it has.
+    assert.equal(isApproved({ upvotes: 5, downvotes: 1 }), false);
 });

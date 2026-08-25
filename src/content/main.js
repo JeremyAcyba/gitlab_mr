@@ -1,26 +1,26 @@
 /**
- * Entry point of the content script: figures out whether we are on the
- * configured GitLab instance, on which kind of page, and starts the right
- * module.
+ * Entry point of the content script: decides whether the current page is a
+ * GitLab merge request page worth decorating, resolves which instance and
+ * which user we are dealing with, then starts the right module.
  */
 (function (root) {
     'use strict';
 
-    const { settings: settingsModule, api: apiModule, pages, threads, dom } = root.GitlabMrTools;
+    const { settings: settingsModule, instance, pages, threads, dom } = root.GitlabMrTools;
+
+    /**
+     * Cheapest possible gate: every page we act on has this in its path, so
+     * the extension does nothing at all on the rest of the web.
+     */
+    const PATH_GATE = '/merge_requests';
 
     /** Selectors that tell us the page is a GitLab one. */
     const GITLAB_MARKERS = [
         '.tanuki-logo',
         '[data-testid="tanuki-logo"]',
+        'body[data-page]',
         'meta[content="GitLab"][property="og:site_name"]',
-        'body[data-page]'
-    ];
-
-    /** Selectors GitLab has used for the link to the current user's profile. */
-    const PROFILE_LINK_SELECTORS = [
-        '[data-track-label="user_profile"]',
-        '[data-testid="user-profile-link"]',
-        '.js-user-profile-link'
+        'link[rel="search"][href*="opensearch"]'
     ];
 
     const LOG_PREFIX = '[gitlab-mr-tools]';
@@ -30,129 +30,110 @@
     }
 
     /**
-     * The extension can bootstrap itself from the logged-in account rather than
-     * asking the user to type their username and instance URL.
+     * Which kind of page are we on? Deliberately based on landmarks that hold
+     * whatever base path GitLab is served under, so this needs no configuration
+     * and no instance lookup.
      *
-     * @returns {{username: string, url: string}|null}
+     * @returns {{kind: 'none'|'merge-request'|'dashboard'|'project-listing'}}
      */
-    function detectAccount() {
-        for (const selector of PROFILE_LINK_SELECTORS) {
-            const link = document.querySelector(selector);
-            const href = link?.getAttribute('href');
-            if (!href) {
-                continue;
-            }
+    function detectPage() {
+        const path = window.location.pathname;
 
-            const username = href.split('/').filter(Boolean).pop();
-            if (username) {
-                return { username, url: window.location.origin };
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Only run on the instance the user configured. A substring check would let
-     * `https://example.com/?next=https://gitlab.com` through, which would leak
-     * the fact that we are looking at GitLab data to an unrelated site.
-     *
-     * @param {string} configuredUrl normalized `origin` + optional base path.
-     * @returns {string|null} the base path when we are on the right instance.
-     */
-    function matchInstance(configuredUrl) {
-        const configured = settingsModule.parseGitlabUrl(configuredUrl);
-        if (!configured || configured.origin !== window.location.origin) {
-            return null;
-        }
-
-        const basePath = configured.pathname === '/' ? '' : configured.pathname.replace(/\/+$/, '');
-        if (basePath && !window.location.pathname.startsWith(`${basePath}/`)) {
-            return null;
-        }
-
-        return basePath;
-    }
-
-    /**
-     * @param {string} basePath
-     * @returns {{kind: string, project?: string}}
-     */
-    function detectPage(basePath) {
-        let path = window.location.pathname;
-        if (basePath && path.startsWith(basePath)) {
-            path = path.slice(basePath.length) || '/';
-        }
-
-        // Dashboard and group listings mix merge requests from several projects.
-        if (
-            (path.startsWith('/dashboard/') || path.startsWith('/groups/')) &&
-            path.includes('/merge_requests')
-        ) {
-            return { kind: 'dashboard' };
-        }
-
-        const projectMatch = path.match(/^\/(.+?)\/-\/merge_requests(\/(\d+))?/);
-        if (!projectMatch) {
+        if (!path.includes(PATH_GATE)) {
             return { kind: 'none' };
         }
 
-        if (projectMatch[3]) {
+        // A single merge request: `/<project>/-/merge_requests/42`.
+        if (/\/-\/merge_requests\/\d+/.test(path)) {
             return { kind: 'merge-request' };
         }
 
-        // The body attribute is authoritative; the path is the fallback for the
-        // pages where GitLab stopped rendering it.
-        const project = document.querySelector('body[data-project-id]')?.dataset.projectId;
-        return { kind: 'project-listing', project: project || projectMatch[1] };
+        // Dashboard and group listings mix merge requests from several projects.
+        if (path.includes('/dashboard/merge_requests') || /\/groups\/.+\/merge_requests/.test(path)) {
+            return { kind: 'dashboard' };
+        }
+
+        if (path.includes('/-/merge_requests')) {
+            return { kind: 'project-listing' };
+        }
+
+        return { kind: 'none' };
     }
 
     /**
-     * @param {object} settings
+     * The project a listing belongs to. GitLab puts it on <body>; the path is
+     * the fallback for the pages where it stopped doing so.
+     *
      * @param {string} basePath
+     * @returns {string|null}
+     */
+    function currentProject(basePath) {
+        const fromBody = document.querySelector('body[data-project-id]')?.dataset.projectId;
+        if (fromBody) {
+            return fromBody;
+        }
+
+        let path = window.location.pathname;
+        if (basePath && path.startsWith(basePath)) {
+            path = path.slice(basePath.length);
+        }
+
+        const match = path.match(/^\/(.+?)\/-\/merge_requests/);
+        return match ? match[1] : null;
+    }
+
+    /**
+     * Resolved once per page load and kept in memory: in-app navigation must
+     * not re-probe the API, and a cache that outlives the page would go stale
+     * the moment the user switches account.
+     */
+    let resolvedInstance;
+
+    function getInstance() {
+        resolvedInstance = resolvedInstance ?? instance.resolve();
+        return resolvedInstance;
+    }
+
+    /**
      * @returns {Promise<void>}
      */
-    async function runForCurrentPage(settings, basePath) {
-        const page = detectPage(basePath);
+    async function runForCurrentPage() {
+        const page = detectPage();
         if (page.kind === 'none') {
             return;
         }
 
+        // Collapsing threads is pure DOM work: no API call, no user needed.
         if (page.kind === 'merge-request') {
             await threads.run();
             return;
         }
 
-        const api = new apiModule.GitlabApi(settings.url);
+        const [gitlab, settings] = await Promise.all([getInstance(), settingsModule.load()]);
+        if (!gitlab) {
+            return;
+        }
+
+        const context = { ...settings, username: gitlab.username };
+
         if (page.kind === 'dashboard') {
-            await pages.runDashboardListing(api, settings, basePath);
-        } else {
-            await pages.runProjectListing(api, settings, page.project);
+            await pages.runDashboardListing(gitlab.api, context, gitlab.basePath);
+            return;
+        }
+
+        const project = currentProject(gitlab.basePath);
+        if (project) {
+            await pages.runProjectListing(gitlab.api, context, project);
         }
     }
 
-    async function bootstrap() {
+    function bootstrap() {
         if (!isGitlabPage()) {
             return;
         }
 
-        let settings = await settingsModule.load();
-
-        if (!settingsModule.isConfigured(settings)) {
-            const account = detectAccount();
-            if (!account) {
-                return;
-            }
-            settings = await settingsModule.save({ ...settings, ...account });
-        }
-
-        const basePath = matchInstance(settings.url);
-        if (basePath === null) {
-            return;
-        }
-
         const run = () => {
-            runForCurrentPage(settings, basePath).catch((error) => {
+            runForCurrentPage().catch((error) => {
                 console.warn(`${LOG_PREFIX} could not decorate the page:`, error);
             });
         };
@@ -163,7 +144,5 @@
         dom.onNavigation(run);
     }
 
-    bootstrap().catch((error) => {
-        console.warn(`${LOG_PREFIX} startup failed:`, error);
-    });
+    bootstrap();
 })(typeof globalThis !== 'undefined' ? globalThis : window);

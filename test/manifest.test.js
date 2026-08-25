@@ -61,7 +61,7 @@ test('the content scripts load in an order that satisfies their dependencies', (
 
     assert.deepEqual(
         Object.keys(sandbox.GitlabMrTools).sort(),
-        ['api', 'decorate', 'dom', 'pages', 'review', 'settings', 'status', 'threads'].sort()
+        ['api', 'decorate', 'dom', 'instance', 'pages', 'review', 'settings', 'status', 'threads'].sort()
     );
 });
 

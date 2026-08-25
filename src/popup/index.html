@@ -10,43 +10,6 @@
 			<p id="gitlab-mr__saved" class="gitlab-mr__saved" role="status" aria-live="polite"></p>
 
 			<div class="gitlab-mr__field">
-				<label for="gitlab-mr__settings__username">Gitlab username</label>
-				<input type="text" id="gitlab-mr__settings__username" autocomplete="off" spellcheck="false" />
-			</div>
-
-			<div class="gitlab-mr__field">
-				<label for="gitlab-mr__settings__url">Gitlab instance URL</label>
-				<input
-					type="url"
-					id="gitlab-mr__settings__url"
-					placeholder="https://gitlab.com"
-					autocomplete="off"
-					spellcheck="false"
-				/>
-				<p class="gitlab-mr__error" id="gitlab-mr__settings__url__error" hidden>
-					Enter a full http(s) URL.
-				</p>
-			</div>
-
-			<fieldset class="gitlab-mr__field">
-				<legend>What are you working with?</legend>
-				<div class="gitlab-mr__radios">
-					<label>
-						<input type="radio" name="working_with" value="upvotes" id="gitlab-mr__upvotes" />
-						Upvotes (thumbs)
-					</label>
-					<label>
-						<input type="radio" name="working_with" value="approvals" id="gitlab-mr__approval" />
-						Approvals
-					</label>
-				</div>
-				<div class="gitlab-mr__inline" id="gitlab-mr__settings__upvotes__container">
-					<label for="gitlab-mr__settings__upvotes">Upvotes needed</label>
-					<input type="number" min="1" step="1" value="2" id="gitlab-mr__settings__upvotes" />
-				</div>
-			</fieldset>
-
-			<div class="gitlab-mr__field">
 				<label for="gitlab-mr__track__mr">Merge request tracking</label>
 				<select id="gitlab-mr__track__mr">
 					<option value="">Track all merge requests</option>

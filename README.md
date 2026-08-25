@@ -31,16 +31,18 @@ the approvals it needs and can be merged.
 
 ## Settings
 
-Open the extension popup to configure it. Everything is saved as you type.
+There is nothing to set up. The extension reads the instance from the page you are on and your
+account from `GET /api/v4/user` on that same instance, so it works on gitlab.com and on any number
+of self-hosted instances at once, each with its own account.
 
-| Setting                | What it does                                                                                        |
-| ---------------------- | --------------------------------------------------------------------------------------------------- |
-| Gitlab username        | Your GitLab username, auto-detected from the logged-in account on first run.                        |
-| Gitlab instance URL    | The instance to run on, e.g. `https://gitlab.com`. The extension stays inert on every other origin. |
-| Working with           | Whether "approved" means enough 👍 or a GitLab approval.                                            |
-| Upvotes needed         | How many 👍 make a merge request mergeable.                                                         |
-| Merge request tracking | Grey out merge requests you don't care about.                                                       |
-| Colors                 | The colour of each status.                                                                          |
+A merge request counts as approved once it has **2 upvotes and no downvote**.
+
+The popup only holds two preferences, shared by every instance:
+
+| Setting                | What it does                                  |
+| ---------------------- | --------------------------------------------- |
+| Merge request tracking | Grey out merge requests you don't care about. |
+| Colors                 | The colour of each status.                    |
 
 ## Development
 
@@ -60,6 +62,7 @@ Load the unpacked extension from the repository root via `chrome://extensions` �
 | ------------------------- | ---------------------------------------------------------------------------------------------- |
 | `src/shared/settings.js`  | Defaults, validation and storage of the settings, shared by the popup and the content scripts. |
 | `src/content/api.js`      | GitLab REST API v4 client (`fetch`, concurrency-limited).                                      |
+| `src/content/instance.js` | Resolves which GitLab instance the page belongs to, and who we are on it.                      |
 | `src/content/status.js`   | Pure decision logic: discussions in, status out. This is what the tests cover.                 |
 | `src/content/decorate.js` | Applies a status to a listing row.                                                             |
 | `src/content/review.js`   | Ties the API, the status logic and the DOM together for one merge request.                     |
@@ -71,6 +74,12 @@ The content scripts are plain scripts (no bundler) sharing a single `GitlabMrToo
 **the order in `manifest.json` matters**; `test/manifest.test.js` guards it.
 
 ## Changelog
+
+### v4.1
+
+- No configuration left: the instance and the username are read from the page, so the extension
+  works on several self-hosted instances at once instead of only the one that was configured
+- Removed the upvotes/approvals switch and the upvotes threshold: 2 upvotes and no downvote
 
 ### v4.0
 

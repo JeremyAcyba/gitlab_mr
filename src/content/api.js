@@ -91,6 +91,16 @@
             return `/projects/${encodeURIComponent(project)}`;
         }
 
+        /**
+         * The logged-in user behind the session cookie. Doubles as the probe
+         * that tells us whether this origin really is a GitLab instance.
+         *
+         * @returns {Promise<object>}
+         */
+        getCurrentUser() {
+            return this.get('/user');
+        }
+
         /** @returns {Promise<object[]>} the opened merge requests of a project. */
         listOpenMergeRequests(project) {
             return this.get(`${GitlabApi.projectPath(project)}/merge_requests`, {
@@ -112,11 +122,6 @@
         /** @returns {Promise<object[]>} the award emoji of a merge request. */
         listAwardEmoji(project, iid) {
             return this.get(`${GitlabApi.mrPath(project, iid)}/award_emoji`, { per_page: 100 });
-        }
-
-        /** @returns {Promise<object>} the approval state of a merge request. */
-        getApprovals(project, iid) {
-            return this.get(`${GitlabApi.mrPath(project, iid)}/approvals`);
         }
 
         static mrPath(project, iid) {

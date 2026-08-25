@@ -50,11 +50,11 @@
      * Project listing: one API call gives us every opened merge request.
      *
      * @param {object} api
-     * @param {object} settings
+     * @param {object} context settings plus the resolved username.
      * @param {string} projectId
      * @returns {Promise<void>}
      */
-    async function runProjectListing(api, settings, projectId) {
+    async function runProjectListing(api, context, projectId) {
         // The rows are rendered client-side: fetching and waiting at the same
         // time keeps us from decorating a listing that is not there yet.
         const [mergeRequests] = await Promise.all([
@@ -68,7 +68,7 @@
 
         await reviewAll(
             api,
-            settings,
+            context,
             mergeRequests.map((mergeRequest) => ({ project: projectId, mergeRequest }))
         );
     }
@@ -78,11 +78,11 @@
      * so we read them off the rendered rows and fetch them one by one.
      *
      * @param {object} api
-     * @param {object} settings
+     * @param {object} context settings plus the resolved username.
      * @param {string} basePath
      * @returns {Promise<void>}
      */
-    async function runDashboardListing(api, settings, basePath) {
+    async function runDashboardListing(api, context, basePath) {
         await waitForElements(MR_LINK_SELECTORS.join(', '));
 
         const seen = new Set();
@@ -116,7 +116,7 @@
             }
         }
 
-        await reviewAll(api, settings, entries);
+        await reviewAll(api, context, entries);
     }
 
     root.GitlabMrTools.pages = { runProjectListing, runDashboardListing, parseMergeRequestHref };

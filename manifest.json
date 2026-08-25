@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Gitlab enhancer",
-    "version": "4.0",
+    "version": "4.1",
     "description": "Gitlab extension to enhance the user experience on the merge request process",
     "permissions": ["storage"],
     "action": {
@@ -21,6 +21,7 @@
                 "src/shared/settings.js",
                 "src/content/dom.js",
                 "src/content/api.js",
+                "src/content/instance.js",
                 "src/content/status.js",
                 "src/content/decorate.js",
                 "src/content/review.js",

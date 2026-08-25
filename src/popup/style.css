@@ -8,8 +8,6 @@
 	--gmt-accent: #e44328;
 	--gmt-border: #bdbdbd;
 	--gmt-text: #303030;
-	--gmt-muted: #6e6e6e;
-	--gmt-error: #c91c00;
 }
 
 * {
@@ -70,9 +68,6 @@ legend {
 	padding: 0 0.25rem;
 }
 
-input[type='text'],
-input[type='url'],
-input[type='number'],
 select {
 	width: 100%;
 	padding: 0.35rem 0.5rem;
@@ -83,45 +78,10 @@ select {
 	color: inherit;
 }
 
-input[type='text']:hover,
-input[type='url']:hover,
-input[type='number']:hover,
 select:hover,
-input[type='text']:focus,
-input[type='url']:focus,
-input[type='number']:focus,
 select:focus {
 	border-color: var(--gmt-accent);
 	outline: none;
-}
-
-.gitlab-mr__radios {
-	display: flex;
-	gap: 1rem;
-	flex-wrap: wrap;
-}
-
-.gitlab-mr__radios label {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.35rem;
-	font-weight: 400;
-	cursor: pointer;
-}
-
-.gitlab-mr__inline {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	margin-top: 0.5rem;
-}
-
-.gitlab-mr__inline input[type='number'] {
-	width: 5rem;
-}
-
-.gitlab-mr__inline[hidden] {
-	display: none;
 }
 
 .gitlab-mr__colors {
@@ -143,14 +103,4 @@ input[type='color'] {
 	border-radius: 4px;
 	background: none;
 	cursor: pointer;
-}
-
-.gitlab-mr__error {
-	margin: 0;
-	font-size: 0.8rem;
-	color: var(--gmt-error);
-}
-
-.gitlab-mr__error[hidden] {
-	display: none;
 }

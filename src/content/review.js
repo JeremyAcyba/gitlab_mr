@@ -5,24 +5,22 @@
 (function (root) {
     'use strict';
 
-    const { TRACKING, WORK_WITH } = root.GitlabMrTools.settings;
+    const { TRACKING } = root.GitlabMrTools.settings;
     const { computeStatus, hasParticipated } = root.GitlabMrTools.status;
     const { decorate, dim } = root.GitlabMrTools.decorate;
 
-    /**
-     * Has the merge request gathered what it needs to be merged? Depending on
-     * the user's preference that is either enough thumbs up, or a GitLab
-     * approval.
-     *
-     * @returns {Promise<boolean>}
-     */
-    async function isApproved(api, project, mergeRequest, settings) {
-        if (settings.working_with === WORK_WITH.APPROVALS) {
-            const approvals = await api.getApprovals(project, mergeRequest.iid);
-            return approvals?.approved === true;
-        }
+    /** How many 👍 make a merge request ready to be merged. */
+    const UPVOTES_NEEDED = 2;
 
-        return mergeRequest.upvotes >= settings.upvotes && mergeRequest.downvotes === 0;
+    /**
+     * Has the merge request gathered what it needs to be merged? A single
+     * thumbs down is enough to hold it back, however many thumbs up it has.
+     *
+     * @param {object} mergeRequest
+     * @returns {boolean}
+     */
+    function isApproved(mergeRequest) {
+        return mergeRequest.upvotes >= UPVOTES_NEEDED && mergeRequest.downvotes === 0;
     }
 
     /** @returns {Promise<boolean>} did I put a thumbs up on it? */
@@ -35,44 +33,43 @@
     }
 
     /**
-     * @param {import('./api.js').GitlabApi} api
+     * @param {object} api
      * @param {string|number} project numeric id or full path.
      * @param {object} mergeRequest as returned by the merge requests endpoint.
-     * @param {object} settings
+     * @param {{username: string, tracking: string, colors: object}} context
      * @returns {Promise<void>}
      */
-    async function reviewMergeRequest(api, project, mergeRequest, settings) {
-        const isMine = mergeRequest.author?.username === settings.username;
+    async function reviewMergeRequest(api, project, mergeRequest, context) {
+        const isMine = mergeRequest.author?.username === context.username;
 
-        if (!isMine && settings.tracking === TRACKING.NOT_MINE) {
+        if (!isMine && context.tracking === TRACKING.NOT_MINE) {
             dim(mergeRequest.id);
             return;
         }
 
         // The award emoji only matter when reviewing somebody else's work.
-        const [approved, upvoted, discussions] = await Promise.all([
-            isApproved(api, project, mergeRequest, settings),
-            isMine ? Promise.resolve(false) : hasUpvoted(api, project, mergeRequest, settings.username),
+        const [upvoted, discussions] = await Promise.all([
+            isMine ? Promise.resolve(false) : hasUpvoted(api, project, mergeRequest, context.username),
             api.listDiscussions(project, mergeRequest.iid)
         ]);
 
         if (
             !isMine &&
-            settings.tracking === TRACKING.NOT_MINE_PARTICIPATE &&
-            !hasParticipated(discussions, settings.username)
+            context.tracking === TRACKING.NOT_MINE_PARTICIPATE &&
+            !hasParticipated(discussions, context.username)
         ) {
             dim(mergeRequest.id);
             return;
         }
 
         const result = computeStatus(discussions, {
-            username: settings.username,
+            username: context.username,
             isMine,
-            isApproved: approved,
+            isApproved: isApproved(mergeRequest),
             hasUpvoted: upvoted
         });
 
-        decorate(mergeRequest.id, result, settings.colors);
+        decorate(mergeRequest.id, result, context.colors);
     }
 
     /**
@@ -81,10 +78,10 @@
      *
      * @returns {Promise<void>}
      */
-    async function reviewAll(api, settings, entries) {
+    async function reviewAll(api, context, entries) {
         const results = await Promise.allSettled(
             entries.map(({ project, mergeRequest }) =>
-                reviewMergeRequest(api, project, mergeRequest, settings)
+                reviewMergeRequest(api, project, mergeRequest, context)
             )
         );
 
@@ -95,5 +92,5 @@
         }
     }
 
-    root.GitlabMrTools.review = { reviewMergeRequest, reviewAll };
+    root.GitlabMrTools.review = { reviewMergeRequest, reviewAll, isApproved, UPVOTES_NEEDED };
 })(typeof globalThis !== 'undefined' ? globalThis : window);
