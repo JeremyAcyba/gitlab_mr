@@ -8,24 +8,31 @@ Chrome store: https://chrome.google.com/webstore/detail/gitlab-mr-tools/gefblbbc
 ## How it works
 
 The extension colours the left border of each row in a merge request listing. There are 3 statuses.
+As a reviewer, only the threads **you opened yourself** are taken into account: a thread somebody
+else started is their business until you make it yours.
 
 ### Actions needed (default red)
 
-**As a reviewer:** you haven't approved yet, or one of the threads you opened was answered and is
-still waiting on you.
+**As a reviewer:** you haven't voted yet and no open thread of yours is waiting on the author — so
+either you never reviewed it, or the author answered you and it is your turn again. You also land
+here when you voted and one of your open threads ends on a conversation rather than on a code
+suggestion, and when you gave a thumbs down without leaving any thread open to explain it.
 
-**As the author:** somebody answered one of your open threads, or the merge request has gathered
-the approvals it needs and can be merged.
+**As the author:** somebody spoke last in an open thread, or the merge request has its 2 thumbs up
+with nothing left open and can be merged.
 
 ### Wait (default orange)
 
-**As a reviewer:** every thread you are involved in is waiting on the author.
+**As a reviewer:** you haven't voted, and an open thread of yours is waiting on the author — you
+spoke last, or a third party did.
 
-**As the author:** you answered every open thread; the ball is in the reviewers' court.
+**As the author:** every open thread is on somebody else, or there is no open thread and not enough
+thumbs up yet.
 
 ### Done (default green)
 
-**As a reviewer:** you approved and every thread you opened is resolved.
+**As a reviewer:** you gave a thumbs up and every thread you opened is either resolved or ends on a
+code suggestion the author can apply on their own.
 
 **As the author:** not applicable — you always have something to do or something to wait for.
 
@@ -74,6 +81,14 @@ The content scripts are plain scripts (no bundler) sharing a single `GitlabMrToo
 **the order in `manifest.json` matters**; `test/manifest.test.js` guards it.
 
 ## Changelog
+
+### v4.2
+
+- A thumbs down now counts as a verdict, like a thumbs up
+- As a reviewer, only the threads you opened yourself are taken into account, and the thumbs other
+  people gave no longer influence your own status
+- As the author, gathering the thumbs up no longer turns the row red while a thread is still open
+- Once you voted, an open thread of yours ending on a code suggestion no longer holds you back
 
 ### v4.1
 

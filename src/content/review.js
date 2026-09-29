@@ -23,14 +23,23 @@
         return mergeRequest.upvotes >= UPVOTES_NEEDED && mergeRequest.downvotes === 0;
     }
 
-    /** @returns {Promise<boolean>} did I put a thumbs up on it? */
-    async function hasUpvoted(api, project, mergeRequest, username) {
+    /**
+     * Which way I voted on the merge request, if at all. A thumbs down counts
+     * as a verdict just as much as a thumbs up.
+     *
+     * @returns {Promise<{hasUpvoted: boolean, hasDownvoted: boolean}>}
+     */
+    async function myVote(api, project, mergeRequest, username) {
         const awards = await api.listAwardEmoji(project, mergeRequest.iid);
-        return (
-            Array.isArray(awards) &&
-            awards.some((award) => award.name === 'thumbsup' && award.user?.username === username)
-        );
+        const mine = Array.isArray(awards) ? awards.filter((award) => award.user?.username === username) : [];
+
+        return {
+            hasUpvoted: mine.some((award) => award.name === 'thumbsup'),
+            hasDownvoted: mine.some((award) => award.name === 'thumbsdown')
+        };
     }
+
+    const NO_VOTE = { hasUpvoted: false, hasDownvoted: false };
 
     /**
      * @param {object} api
@@ -48,8 +57,8 @@
         }
 
         // The award emoji only matter when reviewing somebody else's work.
-        const [upvoted, discussions] = await Promise.all([
-            isMine ? Promise.resolve(false) : hasUpvoted(api, project, mergeRequest, context.username),
+        const [vote, discussions] = await Promise.all([
+            isMine ? Promise.resolve(NO_VOTE) : myVote(api, project, mergeRequest, context.username),
             api.listDiscussions(project, mergeRequest.iid)
         ]);
 
@@ -64,9 +73,11 @@
 
         const result = computeStatus(discussions, {
             username: context.username,
+            authorUsername: mergeRequest.author?.username,
             isMine,
+            isDraft: Boolean(mergeRequest.draft ?? mergeRequest.work_in_progress),
             isApproved: isApproved(mergeRequest),
-            hasUpvoted: upvoted
+            ...vote
         });
 
         decorate(mergeRequest.id, result, context.colors);

@@ -3,7 +3,7 @@
  * decide whether I have something to do.
  *
  * No DOM, no network, no globals in here — this is the part that is unit
- * tested (see test/status.test.mjs).
+ * tested (see test/status.test.js).
  */
 (function (root) {
     'use strict';
@@ -14,6 +14,13 @@
         WAIT: 'wait',
         DONE: 'done'
     };
+
+    /**
+     * A code suggestion in a note body. GitLab renders these as a patch the
+     * author can apply in one click, which is what makes them different from a
+     * plain comment: once posted, there is nothing left for the reviewer to do.
+     */
+    const SUGGESTION_FENCE = /^[ \t]*(?:```|~~~)suggestion\b/m;
 
     /**
      * The last note actually written by a human. GitLab appends system notes
@@ -42,6 +49,11 @@
         return Boolean(note) && note.author?.username === username;
     }
 
+    /** @returns {boolean} true when the note is (or ends with) a code suggestion. */
+    function isSuggestion(note) {
+        return Boolean(note) && typeof note.body === 'string' && SUGGESTION_FENCE.test(note.body);
+    }
+
     /**
      * Discussions that can be resolved are the only ones carrying a "do I have
      * something to do" signal; plain comments are ignored.
@@ -57,6 +69,11 @@
         return discussions
             .map((discussion) => discussion?.notes)
             .filter((notes) => Array.isArray(notes) && notes.length > 0 && Boolean(notes[0].resolvable));
+    }
+
+    /** @returns {object[][]} the resolvable threads still open. */
+    function openThreads(discussions) {
+        return resolvableThreads(discussions).filter((notes) => !notes[0].resolved);
     }
 
     /** @returns {boolean} true when `username` wrote at least one note. */
@@ -75,94 +92,78 @@
     /**
      * Status of a merge request I opened.
      *
-     * Actions needed when somebody answered one of my unresolved threads, or
-     * when the merge request gathered its approvals and is ready to be merged.
+     *  - somebody spoke last in an open thread     -> I owe them an answer
+     *  - enough thumbs up and nothing left open    -> I can merge
+     *  - anything else                             -> the ball is not in my court
+     *
+     * Note that gathering the thumbs up is not enough on its own: an open
+     * thread I answered last still belongs to its reviewer, not to me.
      *
      * @param {object[]} discussions
      * @param {{username: string, isApproved: boolean}} context
      * @returns {{status: string, message: string}}
      */
     function computeAuthorStatus(discussions, { username, isApproved }) {
-        let hasUnresolved = false;
-        let needsAnswer = false;
-
-        for (const notes of resolvableThreads(discussions)) {
-            if (notes[0].resolved) {
-                continue;
-            }
-
-            hasUnresolved = true;
-            if (!isAuthoredBy(lastHumanNote(notes), username)) {
-                needsAnswer = true;
-            }
-        }
+        const open = openThreads(discussions);
+        const owesAnAnswer = open.some((notes) => !isAuthoredBy(lastHumanNote(notes), username));
+        const canBeMerged = isApproved && open.length === 0;
 
         return {
-            status: needsAnswer || isApproved ? STATUS.ACTIONS : STATUS.WAIT,
-            message: isApproved && !hasUnresolved ? 'Can be merged!' : ''
+            status: owesAnAnswer || canBeMerged ? STATUS.ACTIONS : STATUS.WAIT,
+            message: canBeMerged ? 'Can be merged!' : ''
         };
     }
 
     /**
      * Status of a merge request opened by somebody else.
      *
+     * Only the threads I opened myself count here: a thread somebody else
+     * started is their business until I make it mine.
+     *
      * @param {object[]} discussions
-     * @param {{username: string, isApproved: boolean, hasUpvoted: boolean}} context
+     * @param {{username: string, authorUsername: string, hasUpvoted: boolean, hasDownvoted: boolean}} context
      * @returns {{status: string, message: string}}
      */
-    function computeReviewerStatus(discussions, { username, isApproved, hasUpvoted }) {
-        // Threads I opened.
-        let mine = 0;
-        let mineResolved = 0;
-        // Threads I opened that were answered: my turn again.
-        let mineAwaitingMe = 0;
-        // Threads where I spoke last: the ball is in the author's court.
-        let awaitingAuthor = 0;
+    function computeReviewerStatus(discussions, { username, authorUsername, hasUpvoted, hasDownvoted }) {
+        const myOpenThreads = openThreads(discussions).filter((notes) => isAuthoredBy(notes[0], username));
 
-        for (const notes of resolvableThreads(discussions)) {
-            const iOpenedIt = isAuthoredBy(notes[0], username);
-            const iSpokeLast = isAuthoredBy(lastHumanNote(notes), username);
+        if (!hasUpvoted && !hasDownvoted) {
+            // I haven't given my verdict yet. The only thing that can excuse me
+            // is an open thread of mine the author has not answered: until they
+            // do, there is nothing for me to review.
+            const waitingOnTheAuthor = myOpenThreads.some(
+                (notes) => !isAuthoredBy(lastHumanNote(notes), authorUsername)
+            );
 
-            if (iOpenedIt) {
-                mine++;
-                if (notes[0].resolved) {
-                    mineResolved++;
-                } else if (!iSpokeLast) {
-                    mineAwaitingMe++;
-                } else {
-                    awaitingAuthor++;
-                }
-            } else if (!notes[0].resolved && iSpokeLast) {
-                awaitingAuthor++;
-            }
+            return { status: waitingOnTheAuthor ? STATUS.WAIT : STATUS.ACTIONS, message: '' };
         }
 
-        // I already gave my green light: only my own leftover threads matter.
-        if (hasUpvoted || isApproved) {
-            return {
-                status: mineResolved === mine ? STATUS.DONE : STATUS.ACTIONS,
-                message: ''
-            };
+        if (myOpenThreads.length === 0) {
+            // A thumbs down that leaves nothing open explains nothing: I owe the
+            // author either a reason or a change of heart.
+            return { status: hasDownvoted ? STATUS.ACTIONS : STATUS.DONE, message: '' };
         }
 
-        // I never reviewed it, or somebody answered a thread of mine.
-        if (mine === 0 || (mineResolved === mine && awaitingAuthor === 0) || mineAwaitingMe > 0) {
-            return { status: STATUS.ACTIONS, message: '' };
-        }
+        // I voted but left threads open. Only the last message of each decides:
+        // a code suggestion is something the author applies on their own, a
+        // conversation is something I still have to carry.
+        const stillOnMe = myOpenThreads.some((notes) => !isSuggestion(lastHumanNote(notes)));
 
-        if (awaitingAuthor > 0) {
-            return { status: STATUS.WAIT, message: '' };
-        }
-
-        return { status: STATUS.DONE, message: '' };
+        return { status: stillOnMe ? STATUS.ACTIONS : STATUS.DONE, message: '' };
     }
 
     /**
      * @param {object[]} discussions
-     * @param {{username: string, isMine: boolean, isApproved: boolean, hasUpvoted: boolean}} context
+     * @param {object} context
      * @returns {{status: string, message: string}}
      */
     function computeStatus(discussions, context) {
+        // A draft is the author's to finish; reviewers have nothing to do until
+        // it is marked ready, whatever the threads say.
+        if (context.isDraft) {
+            return { status: context.isMine ? STATUS.ACTIONS : STATUS.WAIT, message: '' };
+        }
+
         return context.isMine
             ? computeAuthorStatus(discussions, context)
             : computeReviewerStatus(discussions, context);
@@ -171,7 +172,9 @@
     const statusModule = {
         STATUS,
         lastHumanNote,
+        isSuggestion,
         resolvableThreads,
+        openThreads,
         hasParticipated,
         computeAuthorStatus,
         computeReviewerStatus,
